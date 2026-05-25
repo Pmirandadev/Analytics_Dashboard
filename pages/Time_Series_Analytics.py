@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 
 from utils.time_series import (
-    detectar_datas,
+    preparar_dataset_temporal,
     agrupar_periodo
 )
 
@@ -24,7 +24,7 @@ st.set_page_config(
 st.title("📅 Time Series Analytics")
 
 st.write(
-    "Análise temporal dinâmica dos datasets."
+    "Análise temporal dos datasets."
 )
 
 # =====================================
@@ -51,26 +51,30 @@ if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
 
         # =============================
-        # DETECTAR DATAS
+        # PREPARAÇÃO DATASET
         # =============================
 
-        df, colunas_data = detectar_datas(df)
+        df, colunas_data = preparar_dataset_temporal(df)
+
+        # =============================
+        # VALIDAÇÃO DATAS
+        # =============================
 
         if not colunas_data:
 
             st.warning(
-                "Nenhuma coluna de data encontrada."
+                "Nenhuma coluna de data foi encontrada."
             )
 
         else:
 
             st.success(
-                "Colunas de data detectadas!"
+                f"{len(colunas_data)} coluna(s) de data encontrada(s)."
             )
 
-            # =========================
+            # =============================
             # SIDEBAR
-            # =========================
+            # =============================
 
             st.sidebar.header(
                 "⚙️ Configurações"
@@ -91,9 +95,9 @@ if uploaded_file is not None:
                 ]
             )
 
-            # =========================
+            # =============================
             # COLUNAS NUMÉRICAS
-            # =========================
+            # =============================
 
             colunas_numericas = df.select_dtypes(
                 include=["int64", "float64"]
@@ -104,9 +108,9 @@ if uploaded_file is not None:
                 [None] + colunas_numericas
             )
 
-            # =========================
+            # =============================
             # AGRUPAMENTO
-            # =========================
+            # =============================
 
             df_agrupado = agrupar_periodo(
                 df,
@@ -115,9 +119,9 @@ if uploaded_file is not None:
                 coluna_valor
             )
 
-            # =========================
+            # =============================
             # KPIs
-            # =========================
+            # =============================
 
             st.subheader("📌 Indicadores")
 
@@ -137,49 +141,73 @@ if uploaded_file is not None:
 
             with col3:
                 st.metric(
-                    "Coluna Temporal",
+                    "Data Selecionada",
                     coluna_data
                 )
 
             st.divider()
 
-            # =========================
-            # GRÁFICO LINHA
-            # =========================
+            # =============================
+            # GRÁFICO
+            # =============================
 
             st.subheader(
                 "📈 Evolução Temporal"
             )
 
-            eixo_y = (
-                coluna_valor
-                if coluna_valor
-                else 0
-            )
+            if coluna_valor:
 
-            fig = px.line(
-                df_agrupado,
-                x=coluna_data,
-                y=eixo_y,
-                markers=True
-            )
+                fig = px.line(
+                    df_agrupado,
+                    x=coluna_data,
+                    y=coluna_valor,
+                    markers=True
+                )
+
+            else:
+
+                coluna_contagem = df_agrupado.columns[-1]
+
+                fig = px.line(
+                    df_agrupado,
+                    x=coluna_data,
+                    y=coluna_contagem,
+                    markers=True
+                )
 
             st.plotly_chart(
                 fig,
                 use_container_width=True
             )
 
-            # =========================
-            # TABELA
-            # =========================
+            # =============================
+            # DADOS AGRUPADOS
+            # =============================
 
-            st.subheader("📄 Dados Agrupados")
+            st.subheader(
+                "📄 Dados Agrupados"
+            )
 
             st.dataframe(
                 df_agrupado,
                 use_container_width=True
             )
 
+            # =============================
+            # DADOS ORIGINAIS
+            # =============================
+
+            with st.expander(
+                "Visualizar Dataset Tratado"
+            ):
+
+                st.dataframe(
+                    df,
+                    use_container_width=True
+                )
+
     except Exception as e:
 
-        st.error(f"Erro: {e}")
+        st.error(
+            f"Erro ao processar arquivo: {e}"
+        )

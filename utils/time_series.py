@@ -1,23 +1,51 @@
 import pandas as pd
 
 
-def detectar_datas(df):
+def preparar_dataset_temporal(df):
+
+    # Remove colunas Unnamed
+    df = df.loc[
+        :,
+        ~df.columns.str.contains("^Unnamed")
+    ]
 
     colunas_data = []
 
-    for coluna in df.columns:
+    possiveis_datas = [
+        "Data",
+        "Iniciado em",
+        "Respondido em",
+        "Finalizado em"
+    ]
 
-        try:
+    for coluna in possiveis_datas:
 
-            df[coluna] = pd.to_datetime(
-                df[coluna]
-            )
+        if coluna in df.columns:
 
-            colunas_data.append(coluna)
+            try:
 
-        except:
+                # Coluna usada apenas para agrupamento diário
+                if coluna == "Data":
 
-            pass
+                    df[coluna] = pd.to_datetime(
+                        df[coluna],
+                        errors="coerce",
+                        dayfirst=True
+                    ).dt.date
+
+                # Colunas que precisam manter hora/minuto/segundo
+                else:
+
+                    df[coluna] = pd.to_datetime(
+                        df[coluna],
+                        errors="coerce",
+                        dayfirst=True
+                    )
+
+                colunas_data.append(coluna)
+
+            except Exception:
+                pass
 
     return df, colunas_data
 
@@ -27,47 +55,35 @@ def agrupar_periodo(
     coluna_data,
     periodo,
     coluna_valor=None
-):
+    ):
 
     df = df.copy()
 
-    # Define índice temporal
-    df[coluna_data] = pd.to_datetime(
-        df[coluna_data]
-    )
-
     df = df.set_index(coluna_data)
 
-    # ============================
-    # AGRUPAMENTO
-    # ============================
+    regras = {
+        "Hora": "h",
+        "Dia": "D",
+        "Semana": "W",
+        "Mês": "MS"
+    }
 
-    if periodo == "Dia":
-        regra = "D"
-
-    elif periodo == "Semana":
-        regra = "W"
-
-    elif periodo == "Mês":
-        regra = "M"
-
-    elif periodo == "Hora":
-        regra = "H"
-
-    # ============================
-    # AGREGAÇÃO
-    # ============================
+    regra = regras.get(periodo, "D")
 
     if coluna_valor:
 
-        agrupado = df[
-            coluna_valor
-        ].resample(regra).sum()
+        agrupado = (
+            df[coluna_valor]
+            .resample(regra)
+            .mean()
+        )
 
     else:
 
-        agrupado = df.resample(
-            regra
-        ).size()
+        agrupado = (
+            df
+            .resample(regra)
+            .size()
+        )
 
     return agrupado.reset_index()
