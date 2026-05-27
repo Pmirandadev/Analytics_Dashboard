@@ -84,20 +84,31 @@ def normalizar_texto(df):
 
     return df
 
+
 # ==============================
 # CONVERTER TIPOS
 # ==============================
 
-def converter_tipo(df, coluna, tipo):
+def converter_tipo(
+    df,
+    coluna,
+    tipo,
+    formato_data=None
+):
 
     df = df.copy()
 
     try:
 
+        # STRING
         if tipo == "string":
 
-            df[coluna] = df[coluna].astype(str)
+            df[coluna] = (
+                df[coluna]
+                .astype(str)
+            )
 
+        # INTEGER
         elif tipo == "int":
 
             df[coluna] = pd.to_numeric(
@@ -105,6 +116,7 @@ def converter_tipo(df, coluna, tipo):
                 errors="coerce"
             ).astype("Int64")
 
+        # FLOAT
         elif tipo == "float":
 
             df[coluna] = pd.to_numeric(
@@ -112,25 +124,37 @@ def converter_tipo(df, coluna, tipo):
                 errors="coerce"
             )
 
+        # DATETIME
         elif tipo == "datetime":
 
             df[coluna] = pd.to_datetime(
                 df[coluna],
-                errors="coerce"
+                format=formato_data,
+                errors="coerce",
+                dayfirst=True
             )
 
-    except:
+        return df
 
-        pass
+    except Exception as e:
 
-    return df
+        print(
+            f"Erro ao converter coluna "
+            f"'{coluna}': {e}"
+        )
+
+        return df
 
 
 # ==============================
 # RENOMEAR COLUNAS
 # ==============================
 
-def renomear_coluna(df, coluna_antiga, coluna_nova):
+def renomear_coluna(
+    df,
+    coluna_antiga,
+    coluna_nova
+):
 
     return df.rename(
         columns={
@@ -163,7 +187,6 @@ def remover_caracteres(
 
     return df
 
-
 # ==============================
 # DETECTAR OUTLIERS
 # ==============================
@@ -171,11 +194,13 @@ def remover_caracteres(
 def detectar_outliers(df, coluna):
 
     Q1 = df[coluna].quantile(0.25)
+
     Q3 = df[coluna].quantile(0.75)
 
     IQR = Q3 - Q1
 
     inferior = Q1 - 1.5 * IQR
+
     superior = Q3 + 1.5 * IQR
 
     outliers = df[

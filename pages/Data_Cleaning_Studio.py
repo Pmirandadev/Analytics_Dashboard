@@ -50,23 +50,23 @@ if uploaded_file is not None:
 
     try:
 
-        # ==============================
+        # ===================================
         # LEITURA CSV
-        # ==============================
+        # ===================================
 
         df = pd.read_csv(uploaded_file)
 
         st.success("Dataset carregado!")
 
-        # ==============================
+        # ===================================
         # CÓPIA DATAFRAME
-        # ==============================
+        # ===================================
 
         df_tratado = df.copy()
 
-        # ==============================
+        # ===================================
         # SIDEBAR
-        # ==============================
+        # ===================================
 
         st.sidebar.header("⚙️ Transformações")
 
@@ -195,7 +195,7 @@ if uploaded_file is not None:
             key="converter_tipo"
         )
 
-        if coluna_tipo:
+        if coluna_tipo is not None:
 
             tipo = st.sidebar.selectbox(
                 "Novo Tipo",
@@ -204,14 +204,68 @@ if uploaded_file is not None:
                     "int",
                     "float",
                     "datetime"
-                ]
+                ],
+                key="tipo_select"
             )
+
+            formato_data = None
+
+            # ===================================
+            # FORMATOS DATETIME
+            # ===================================
+
+            if tipo == "datetime":
+
+                st.sidebar.subheader("📅 Formato da Data")
+
+                formato_data = st.sidebar.selectbox(
+                    "Selecionar Formato",
+                    [
+                        "%d/%m/%Y",
+                        "%d/%m/%Y, %H:%M",
+                        "%Y-%m-%d",
+                        "%m/%d/%Y"
+                    ],
+                    key="formato_data"
+                )
+
+            # ===================================
+            # CONVERSÃO
+            # ===================================
 
             df_tratado = converter_tipo(
                 df_tratado,
                 coluna_tipo,
-                tipo
+                tipo,
+                formato_data
             )
+
+            # ===================================
+            # AUDITORIA DATETIME
+            # ===================================
+
+            if tipo == "datetime":
+
+                total_invalidos = (
+                    df_tratado[coluna_tipo]
+                    .isna()
+                    .sum()
+                )
+
+                total_validos = (
+                    df_tratado.shape[0]
+                    - total_invalidos
+                )
+
+                st.sidebar.success(
+                    f"✔ {total_validos} convertidos"
+                )
+
+                if total_invalidos > 0:
+
+                    st.sidebar.warning(
+                        f"❌ {total_invalidos} inválidos"
+                    )
 
         # ===================================
         # REMOVER CARACTERES

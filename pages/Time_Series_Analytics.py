@@ -2,212 +2,261 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-from utils.time_series import (
-    preparar_dataset_temporal,
-    agrupar_periodo
-)
-
-# =====================================
+# ======================================
 # CONFIG
-# =====================================
+# ======================================
 
 st.set_page_config(
     page_title="Time Series Analytics",
-    page_icon="📅",
+    page_icon="📈",
     layout="wide"
 )
 
-# =====================================
-# TÍTULO
-# =====================================
-
-st.title("📅 Time Series Analytics")
+st.title("📈 Time Series Analytics")
 
 st.write(
-    "Análise temporal dos datasets."
+    "Análise temporal dos atendimentos."
 )
 
-# =====================================
+# ======================================
 # UPLOAD
-# =====================================
+# ======================================
 
 uploaded_file = st.file_uploader(
-    "Escolha um CSV",
+    "Escolha um CSV tratado",
     type=["csv"]
 )
 
-# =====================================
+# ======================================
 # PROCESSAMENTO
-# =====================================
+# ======================================
 
 if uploaded_file is not None:
 
     try:
 
-        # =============================
-        # LEITURA CSV
-        # =============================
+        # ======================================
+        # LEITURA
+        # ======================================
 
         df = pd.read_csv(uploaded_file)
 
-        # =============================
-        # PREPARAÇÃO DATASET
-        # =============================
+        # ======================================
+        # CONVERSÕES
+        # ======================================
 
-        df, colunas_data = preparar_dataset_temporal(df)
+        df["Data"] = pd.to_datetime(
+            df["Data"]
+        )
 
-        # =============================
-        # VALIDAÇÃO DATAS
-        # =============================
+        df["Iniciado em"] = pd.to_datetime(
+            df["Iniciado em"],
+            format="%d/%m/%Y, %H:%M",
+            errors="coerce",
+            dayfirst=True
+        )
 
-        if not colunas_data:
+        df["Finalizado em"] = pd.to_datetime(
+            df["Finalizado em"],
+            format="%d/%m/%Y, %H:%M",
+            errors="coerce",
+            dayfirst=True
+        )
 
-            st.warning(
-                "Nenhuma coluna de data foi encontrada."
+        df["Tempo de resposta"] = pd.to_timedelta(
+            df["Tempo de resposta"]
+        )
+
+        df["Duração"] = pd.to_timedelta(
+            df["Duração"]
+        )
+
+        # ======================================
+        # COLUNAS AUXILIARES
+        # ======================================
+
+        df["Hora"] = (
+            df["Iniciado em"]
+            .dt.hour
+        )
+
+        df["Dia"] = (
+            df["Data"]
+            .dt.date
+        )
+
+        # ======================================
+        # KPIs
+        # ======================================
+
+        total_atendimentos = df.shape[0]
+
+        tma_medio = (
+            df["Duração"]
+            .mean()
+        )
+
+        resposta_media = (
+            df["Tempo de resposta"]
+            .mean()
+        )
+
+        chats_finalizados = (
+            df["Finalizado em"]
+            .notna()
+            .sum()
+        )
+
+        # ======================================
+        # KPIs VISUAIS
+        # ======================================
+
+        st.subheader("📌 Indicadores")
+
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            st.metric(
+                "Total Atendimentos",
+                total_atendimentos
             )
 
-        else:
-
-            st.success(
-                f"{len(colunas_data)} coluna(s) de data encontrada(s)."
+        with col2:
+            st.metric(
+                "TMA Médio",
+                str(tma_medio).split(".")[0]
             )
 
-            # =============================
-            # SIDEBAR
-            # =============================
-
-            st.sidebar.header(
-                "⚙️ Configurações"
+        with col3:
+            st.metric(
+                "Tempo Médio Resposta",
+                str(resposta_media).split(".")[0]
             )
 
-            coluna_data = st.sidebar.selectbox(
-                "Coluna de Data",
-                colunas_data
+        with col4:
+            st.metric(
+                "Chats Finalizados",
+                chats_finalizados
             )
 
-            periodo = st.sidebar.selectbox(
-                "Agrupar por",
-                [
-                    "Hora",
-                    "Dia",
-                    "Semana",
-                    "Mês"
-                ]
-            )
+        st.divider()
 
-            # =============================
-            # COLUNAS NUMÉRICAS
-            # =============================
+        # ======================================
+        # ATENDIMENTOS POR DIA
+        # ======================================
 
-            colunas_numericas = df.select_dtypes(
-                include=["int64", "float64"]
-            ).columns.tolist()
+        atendimentos_dia = (
+            df.groupby("Dia")
+            .size()
+            .reset_index(name="Atendimentos")
+        )
 
-            coluna_valor = st.sidebar.selectbox(
-                "Coluna Numérica",
-                [None] + colunas_numericas
-            )
+        fig_atendimentos = px.line(
+            atendimentos_dia,
+            x="Dia",
+            y="Atendimentos",
+            markers=True,
+            title="Atendimentos por Dia"
+        )
 
-            # =============================
-            # AGRUPAMENTO
-            # =============================
+        st.plotly_chart(
+            fig_atendimentos,
+            use_container_width=True
+        )
 
-            df_agrupado = agrupar_periodo(
-                df,
-                coluna_data,
-                periodo,
-                coluna_valor
-            )
+        # ======================================
+        # TMA MÉDIO POR DIA
+        # ======================================
 
-            # =============================
-            # KPIs
-            # =============================
+        tma_dia = (
+            df.groupby("Dia")["Duração"]
+            .mean()
+            .reset_index()
+        )
 
-            st.subheader("📌 Indicadores")
+        tma_dia["Duração"] = (
+            tma_dia["Duração"]
+            .astype(str)
+            .str.split(".")
+            .str[0]
+        )
 
-            col1, col2, col3 = st.columns(3)
+        fig_tma = px.bar(
+            tma_dia,
+            x="Dia",
+            y="Duração",
+            title="TMA Médio por Dia"
+        )
 
-            with col1:
-                st.metric(
-                    "Registros",
-                    df.shape[0]
-                )
+        st.plotly_chart(
+            fig_tma,
+            use_container_width=True
+        )
 
-            with col2:
-                st.metric(
-                    "Períodos",
-                    df_agrupado.shape[0]
-                )
+        # ======================================
+        # TEMPO MÉDIO RESPOSTA
+        # ======================================
 
-            with col3:
-                st.metric(
-                    "Data Selecionada",
-                    coluna_data
-                )
+        resposta_dia = (
+            df.groupby("Dia")["Tempo de resposta"]
+            .mean()
+            .reset_index()
+        )
 
-            st.divider()
+        resposta_dia["Tempo de resposta"] = (
+            resposta_dia["Tempo de resposta"]
+            .astype(str)
+            .str.split(".")
+            .str[0]
+        )
 
-            # =============================
-            # GRÁFICO
-            # =============================
+        fig_resposta = px.line(
+            resposta_dia,
+            x="Dia",
+            y="Tempo de resposta",
+            markers=True,
+            title="Tempo Médio de Resposta"
+        )
 
-            st.subheader(
-                "📈 Evolução Temporal"
-            )
+        st.plotly_chart(
+            fig_resposta,
+            use_container_width=True
+        )
 
-            if coluna_valor:
+        # ======================================
+        # HEATMAP
+        # ======================================
 
-                fig = px.line(
-                    df_agrupado,
-                    x=coluna_data,
-                    y=coluna_valor,
-                    markers=True
-                )
+        heatmap = (
+            df.groupby(["Dia", "Hora"])
+            .size()
+            .reset_index(name="Atendimentos")
+        )
 
-            else:
+        fig_heatmap = px.density_heatmap(
+            heatmap,
+            x="Hora",
+            y="Dia",
+            z="Atendimentos",
+            title="HeatMap Atendimentos por Hora"
+        )
 
-                coluna_contagem = df_agrupado.columns[-1]
+        st.plotly_chart(
+            fig_heatmap,
+            use_container_width=True
+        )
 
-                fig = px.line(
-                    df_agrupado,
-                    x=coluna_data,
-                    y=coluna_contagem,
-                    markers=True
-                )
+        # ======================================
+        # TABELA ANALÍTICA
+        # ======================================
 
-            st.plotly_chart(
-                fig,
-                use_container_width=True
-            )
+        st.subheader("📄 Dataset Analítico")
 
-            # =============================
-            # DADOS AGRUPADOS
-            # =============================
-
-            st.subheader(
-                "📄 Dados Agrupados"
-            )
-
-            st.dataframe(
-                df_agrupado,
-                use_container_width=True
-            )
-
-            # =============================
-            # DADOS ORIGINAIS
-            # =============================
-
-            with st.expander(
-                "Visualizar Dataset Tratado"
-            ):
-
-                st.dataframe(
-                    df,
-                    use_container_width=True
-                )
+        st.dataframe(
+            df,
+            use_container_width=True
+        )
 
     except Exception as e:
 
-        st.error(
-            f"Erro ao processar arquivo: {e}"
-        )
+        st.error(f"Erro: {e}")
