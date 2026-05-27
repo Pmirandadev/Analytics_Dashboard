@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 def limpar_dados(df):
 
     # Remove duplicados
@@ -15,7 +14,6 @@ def limpar_dados(df):
         df[coluna] = df[coluna].astype(str).str.strip()
 
     return df
-
 
 def relatorio_qualidade(df):
 

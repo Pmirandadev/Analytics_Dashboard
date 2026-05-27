@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 # ==============================
 # REMOVER COLUNAS
 # ==============================
@@ -9,7 +8,6 @@ def remover_colunas(df, colunas):
 
     return df.drop(columns=colunas)
 
-
 # ==============================
 # REMOVER NULOS
 # ==============================
@@ -17,7 +15,6 @@ def remover_colunas(df, colunas):
 def remover_nulos(df):
 
     return df.dropna()
-
 
 # ==============================
 # PREENCHER NULOS
@@ -51,7 +48,6 @@ def preencher_nulos(df, metodo):
 
     return df
 
-
 # ==============================
 # REMOVER DUPLICADOS
 # ==============================
@@ -59,7 +55,6 @@ def preencher_nulos(df, metodo):
 def remover_duplicados(df):
 
     return df.drop_duplicates()
-
 
 # ==============================
 # NORMALIZAR TEXTO
@@ -83,7 +78,6 @@ def normalizar_texto(df):
         )
 
     return df
-
 
 # ==============================
 # CONVERTER TIPOS
@@ -144,7 +138,6 @@ def converter_tipo(
         )
 
         return df
-
 
 # ==============================
 # RENOMEAR COLUNAS

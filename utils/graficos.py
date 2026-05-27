@@ -1,7 +1,6 @@
 import plotly.express as px
 import pandas as pd
 
-
 def criar_grafico(
     df,
     tipo_grafico,

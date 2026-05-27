@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 def preparar_dataset_temporal(df):
 
     # Remove colunas Unnamed
@@ -48,7 +47,6 @@ def preparar_dataset_temporal(df):
                 pass
 
     return df, colunas_data
-
 
 def agrupar_periodo(
     df,

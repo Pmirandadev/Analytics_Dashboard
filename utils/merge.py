@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 def realizar_merge(
     df1,
     df2,
@@ -8,7 +7,6 @@ def realizar_merge(
     coluna_df2,
     tipo_merge
 ):
-
     merged = pd.merge(
         df1,
         df2,
